@@ -1,6 +1,7 @@
 import json
 import requests
 import urllib
+import sys
 
 try:
     from urllib.request import urlretrieve  #py3
@@ -10,31 +11,31 @@ except ImportError:
 class Robinhood:
 
     endpoints = {
-        "accounts": "https://api.robinhood.com/accounts/",
-        "ach_iav_auth": "https://api.robinhood.com/ach/iav/auth/",
-        "ach_relationships": "https://api.robinhood.com/ach/relationships/",
-        "ach_transfers": "https://api.robinhood.com/ach/transfers/",
-        "applications": "https://api.robinhood.com/applications/",
-        "document_requests": "https://api.robinhood.com/upload/document_requests/",
-        "dividends": "https://api.robinhood.com/dividends/",
-        "edocuments": "https://api.robinhood.com/documents/",
-        "employment": "https://api.robinhood.com/user/employment",
-        "investment_profile":  "https://api.robinhood.com/user/investment_profile/",
-        "instruments": "https://api.robinhood.com/instruments/",
-        "login":  "https://api.robinhood.com/oauth2/token/",
-        "margin_upgrades": "https://api.robinhood.com/margin/upgrades/",
-        "markets": "https://api.robinhood.com/markets/",
-        "notification_settings": "https://api.robinhood.com/settings/notifications/",
-        "notifications": "https://api.robinhood.com/notifications/",
-        "orders": "https://api.robinhood.com/orders/",
-        "password_reset": "https://api.robinhood.com/password_reset/request/",
-        "portfolios": "https://api.robinhood.com/portfolios/",
-        "positions": "https://api.robinhood.com/positions/",
-        "quotes": "https://api.robinhood.com/quotes/",
-        "user": "https://api.robinhood.com/user/",
-        "watchlists": "https://api.robinhood.com/watchlists/",
-        "optionsOrders":"https://api.robinhood.com/options/orders/",
-        "optionsPositions":"https://api.robinhood.com/options/positions/"
+        "accounts":               "https://api.robinhood.com/accounts/",
+        "achIAVAuth":             "https://api.robinhood.com/ach/iav/auth/",
+        "achRelationships":       "https://api.robinhood.com/ach/relationships/",
+        "achTransfers":           "https://api.robinhood.com/ach/transfers/",
+        "applications":           "https://api.robinhood.com/applications/",
+        "document_requests":      "https://api.robinhood.com/upload/document_requests/",
+        "dividends":              "https://api.robinhood.com/dividends/",
+        "edocuments":             "https://api.robinhood.com/documents/",
+        "employment":             "https://api.robinhood.com/user/employment",
+        "investment_profile":     "https://api.robinhood.com/user/investment_profile/",
+        "instruments":            "https://api.robinhood.com/instruments/",
+        "login":                  "https://api.robinhood.com/oauth2/token/",
+        "margin_upgrades":        "https://api.robinhood.com/margin/upgrades/",
+        "markets":                "https://api.robinhood.com/markets/",
+        "notification_settings":  "https://api.robinhood.com/settings/notifications/",
+        "notifications":          "https://api.robinhood.com/notifications/",
+        "orders":                 "https://api.robinhood.com/orders/",
+        "password_reset":         "https://api.robinhood.com/password_reset/request/",
+        "portfolios":             "https://api.robinhood.com/portfolios/",
+        "positions":              "https://api.robinhood.com/positions/",
+        "quotes":                 "https://api.robinhood.com/quotes/",
+        "user":                   "https://api.robinhood.com/user/",
+        "watchlists":             "https://api.robinhood.com/watchlists/",
+        "optionsOrders":          "https://api.robinhood.com/options/orders/",
+        "optionsPositions":       "https://api.robinhood.com/options/positions/"
     }
 
     session = None
@@ -62,7 +63,7 @@ class Robinhood:
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
             "X-Robinhood-API-Version": "1.0.0",
             "Connection": "keep-alive",
-            "User-Agent": "Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)"
+            "User-Agent": "Robinhood/1.0 (Python-%d.%d.%d-%s)" % sys.version_info[0:4]
         }
         self.session.headers = self.headers
 
@@ -205,3 +206,4 @@ class Robinhood:
     def place_sell_order(self, instrument, quantity, bid_price=None):
         transaction = "sell"
         return self.place_order(instrument, quantity, bid_price, transaction)
+

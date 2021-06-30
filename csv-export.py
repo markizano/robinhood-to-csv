@@ -8,6 +8,7 @@ import argparse
 import ast
 from dotenv import load_dotenv, find_dotenv
 import os
+import pdb
 
 logged_in = False
 
@@ -49,8 +50,71 @@ queued_count = 0
 #holds instrument['symbols'] to reduce API ovehead {instrument_url:symbol}
 cached_instruments = {}
 
+'''
+transfers:
+{
+  "next": "https://api.robinhood.com/public/ach/transfers/?cursor=cD0yMDE3LTEyLTE1KzIwJTNBMzMlM0EzNS44MTI5MDIlMkIwMCUzQTAw",
+  "previous": null,
+  "results": [
+    {
+      "id": "6d482f27-8dd6-44e8-a7f4-f40689848d4d",
+      "ref_id": "6d482f27-8dd6-44e8-a7f4-f40689848d4d",
+      "url": "https://api.robinhood.com/ach/transfers/6d482f27-8dd6-44e8-a7f4-f40689848d4d/",
+      "cancel": null,
+      "ach_relationship": "https://api.robinhood.com/ach/relationships/ed83a384-d6f5-4789-8b18-461dcb7a5f12/",
+      "account": "https://api.robinhood.com/accounts/5QT38840/",
+      "amount": "500.00",
+      "direction": "deposit",
+      "state": "completed",
+      "fees": "0.00",
+      "status_description": "",
+      "scheduled": false,
+      "expected_landing_date": "2021-06-17",
+      "early_access_amount": "0.00",
+      "created_at": "2021-06-11T18:54:01.659065-04:00",
+      "updated_at": "2021-06-17T12:13:11.985414Z",
+      "rhs_state": "completed",
+      "expected_sweep_at": null,
+      "expected_landing_datetime": "2021-06-17T09:00:00-04:00",
+      "investment_schedule_id": null
+    }, ...
+  ]
+}
+
+relationships:
+{
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "ed83a384-d6f5-4789-8b18-461dcb7a5f12",
+      "verification_method": "bank_auth",
+      "bank_account_number": "3331",
+      "bank_account_nickname": "Chase",
+      "verified": true,
+      "state": "approved",
+      "first_created_at": "2018-11-10T14:29:40.615906-05:00",
+      "document_request": null,
+      "url": "https://api.robinhood.com/ach/relationships/ed83a384-d6f5-4789-8b18-461dcb7a5f12/",
+      "withdrawal_limit": "3206.66",
+      "initial_deposit": "0.00",
+      "account": "https://api.robinhood.com/accounts/5QT38840/",
+      "unlink": "https://api.robinhood.com/ach/relationships/ed83a384-d6f5-4789-8b18-461dcb7a5f12/unlink/",
+      "verify_micro_deposits": null,
+      "unlinked_at": null,
+      "created_at": "2018-11-10T14:29:40.615906-05:00",
+      "bank_account_type": "checking",
+      "bank_routing_number": "065400137",
+      "bank_account_holder_name": "Mark Harris"
+    }, ...
+  ]
+}
+'''
+
 # fetch order history and related metadata from the Robinhood API
 orders = robinhood.get_endpoint('orders')
+transfers = robinhood.get_endpoint('ach_transfers')
+relationships = robinhood.get_endpoint('ach_relationships')
 
 # load a debug file
 # raw_json = open('debug.txt','rU').read()
@@ -58,13 +122,9 @@ orders = robinhood.get_endpoint('orders')
 
 # store debug
 if args.debug:
-    # save the CSV
-    try:
-        with open("debug.txt", "w+") as outfile:
-            outfile.write(str(orders))
-            print("Debug infomation written to debug.txt")
-    except IOError:
-        print('Oops.  Unable to write file to debug.txt')
+    import code
+    print('Start a PDB debugging shell. Use `code.interact(local=locals())\' to start an interactive Python shell.')
+    pdb.set_trace()
 
 # do/while for pagination
 paginated = True
@@ -236,3 +296,4 @@ if args.dividends:
 
 if args.profit:
     profit_csv = profit_extractor(csv, filename)
+
