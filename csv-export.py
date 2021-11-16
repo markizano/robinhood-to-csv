@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from __future__ import print_function
 from Robinhood import Robinhood
 from login_data import collect_login_data
@@ -7,8 +9,10 @@ import collections
 import argparse
 import ast
 from dotenv import load_dotenv, find_dotenv
-import os
+import os, sys
 import pdb
+
+import pymongo
 
 logged_in = False
 
@@ -50,81 +54,80 @@ queued_count = 0
 #holds instrument['symbols'] to reduce API ovehead {instrument_url:symbol}
 cached_instruments = {}
 
-'''
-transfers:
-{
-  "next": "https://api.robinhood.com/public/ach/transfers/?cursor=cD0yMDE3LTEyLTE1KzIwJTNBMzMlM0EzNS44MTI5MDIlMkIwMCUzQTAw",
-  "previous": null,
-  "results": [
-    {
-      "id": "6d482f27-8dd6-44e8-a7f4-f40689848d4d",
-      "ref_id": "6d482f27-8dd6-44e8-a7f4-f40689848d4d",
-      "url": "https://api.robinhood.com/ach/transfers/6d482f27-8dd6-44e8-a7f4-f40689848d4d/",
-      "cancel": null,
-      "ach_relationship": "https://api.robinhood.com/ach/relationships/ed83a384-d6f5-4789-8b18-461dcb7a5f12/",
-      "account": "https://api.robinhood.com/accounts/5QT38840/",
-      "amount": "500.00",
-      "direction": "deposit",
-      "state": "completed",
-      "fees": "0.00",
-      "status_description": "",
-      "scheduled": false,
-      "expected_landing_date": "2021-06-17",
-      "early_access_amount": "0.00",
-      "created_at": "2021-06-11T18:54:01.659065-04:00",
-      "updated_at": "2021-06-17T12:13:11.985414Z",
-      "rhs_state": "completed",
-      "expected_sweep_at": null,
-      "expected_landing_datetime": "2021-06-17T09:00:00-04:00",
-      "investment_schedule_id": null
-    }, ...
-  ]
-}
-
-relationships:
-{
-  "next": null,
-  "previous": null,
-  "results": [
-    {
-      "id": "ed83a384-d6f5-4789-8b18-461dcb7a5f12",
-      "verification_method": "bank_auth",
-      "bank_account_number": "3331",
-      "bank_account_nickname": "Chase",
-      "verified": true,
-      "state": "approved",
-      "first_created_at": "2018-11-10T14:29:40.615906-05:00",
-      "document_request": null,
-      "url": "https://api.robinhood.com/ach/relationships/ed83a384-d6f5-4789-8b18-461dcb7a5f12/",
-      "withdrawal_limit": "3206.66",
-      "initial_deposit": "0.00",
-      "account": "https://api.robinhood.com/accounts/5QT38840/",
-      "unlink": "https://api.robinhood.com/ach/relationships/ed83a384-d6f5-4789-8b18-461dcb7a5f12/unlink/",
-      "verify_micro_deposits": null,
-      "unlinked_at": null,
-      "created_at": "2018-11-10T14:29:40.615906-05:00",
-      "bank_account_type": "checking",
-      "bank_routing_number": "065400137",
-      "bank_account_holder_name": "Mark Harris"
-    }, ...
-  ]
-}
-'''
-
 # fetch order history and related metadata from the Robinhood API
 orders = robinhood.get_endpoint('orders')
-transfers = robinhood.get_endpoint('ach_transfers')
-relationships = robinhood.get_endpoint('ach_relationships')
+transfers = robinhood.get_endpoint('achTransfers')
+relationships = robinhood.get_endpoint('achRelationships')
 
-# load a debug file
-# raw_json = open('debug.txt','rU').read()
-# orders = ast.literal_eval(raw_json)
+conn = pymongo.MongoClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017/admin'))
+db = conn.robinhood
 
-# store debug
+relcount = len(relationships['results'])
+db.relationships.delete_many({})
+db.relationships.insert_many(relationships['results'])
+while 'next' in relationships and relationships['next']:
+    if relationships['next'] != None:
+        print('Next relationship url: %s' % relationships['next'])
+        relationships = robinhood.get_custom_endpoint(relationships['next'])
+    relcount += len(relationships['results'])
+    db.relationships.insert_many(relationships['results'])
+print('Found %d account relationships.' % relcount)
+
+tcount = len(transfers['results'])
+db.transfers.delete_many({})
+for transfer in transfers['results']:
+    transfer['ach_relationship_id'] = os.path.basename( transfer['ach_relationship'].rstrip('/') )
+db.transfers.insert_many(transfers['results'])
+while 'next' in transfers and transfers['next']:
+    if transfers['next'] != None:
+        # For some reason, the "next" argument from Robinhood comes with this extra "/public" folder in the URI path.
+        next_url = transfers['next'].replace('https://api.robinhood.com/public/', 'https://api.robinhood.com/')
+        print('Next transfers url: %s' % next_url)
+        transfers = robinhood.get_custom_endpoint(next_url)
+    for transfer in transfers['results']:
+        transfer['ach_relationship_id'] = os.path.basename( transfer['ach_relationship'].rstrip('/') )
+    tcount += len(transfers['results'])
+    db.transfers.insert_many(transfers['results'])
+print('Found %d transfers.' % tcount)
+
+
+ocount = len(orders['results'])
+db.orders.delete_many({})
+db.orders.insert_many(orders['results'])
+while 'next' in orders and orders['next']:
+    if orders['next'] != None:
+        print('Next order URL: %s' % orders['next'])
+        orders = robinhood.get_custom_endpoint(orders['next'])
+    ocount += len(orders['results'])
+    db.orders.insert_many(orders['results'])
+print('Found %d orders.' % ocount)
+
+
+db.instruments.delete_many({})
+instruments = []
+for instrument_url in db.orders.distinct('instrument'):
+    instrument_id = os.path.basename( instrument_url.rstrip('/') )
+    print('Fetching instrument: %s' % instrument_url)
+    instrument = robinhood.get_custom_endpoint(instrument_url)
+    instruments.append({
+      '_id': instrument_id,
+      'symbol': instrument['symbol'],
+      'name': instrument['simple_name'],
+      'full_name': instrument['name'],
+      'type': instrument['type'],
+      'market': os.path.basename(instrument['market'].rstrip('/')),
+    })
+
+print('Found %d instruments.' % len(instruments))
+db.instruments.insert_many(instruments)
+
+
 if args.debug:
     import code
     print('Start a PDB debugging shell. Use `code.interact(local=locals())\' to start an interactive Python shell.')
     pdb.set_trace()
+
+sys.exit(0)
 
 # do/while for pagination
 paginated = True
