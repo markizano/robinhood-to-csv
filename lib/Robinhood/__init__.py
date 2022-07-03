@@ -1,3 +1,4 @@
+
 import json
 import requests
 import urllib
@@ -6,7 +7,12 @@ import sys
 try:
     from urllib.request import urlretrieve  #py3
 except ImportError:
-    from urllib import urlretrieve  # py2
+    from urllib import urlretrieve  #py2
+
+try:
+    from urllib.request import getproxies #py3
+except ImportError:
+    from urllib import getproxies #py2
 
 class Robinhood:
 
@@ -38,24 +44,15 @@ class Robinhood:
         "optionsPositions":       "https://api.robinhood.com/options/positions/"
     }
 
-    session = None
-    username = None
-    password = None
-    headers = None
-    auth_token = None
-    positions = None
     client_id = "c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS"
 
-    ##############################
-    #Logging in and initializing
-    ##############################
-
-    def __init__(self):
+    def __init__(self, cfg={}):
+        self.username = cfg.get('username')
+        self.password = cf.get('password')
+        self.mfa_code = cfg.get('mfa_code')
+        self.auth_token = None
         self.session = requests.session()
-        try:
-            self.session.proxies = urllib.getproxies() #py2
-        except:
-            self.session.proxies = urllib.request.getproxies() #py3
+        self.session.proxies = getproxies()
         self.headers = {
             "Accept": "*/*",
             "Accept-Encoding": "gzip, deflate",
@@ -63,7 +60,7 @@ class Robinhood:
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
             "X-Robinhood-API-Version": "1.0.0",
             "Connection": "keep-alive",
-            "User-Agent": "Robinhood/1.0 (Python-%d.%d.%d-%s)" % sys.version_info[0:4]
+            "User-Agent": "libRobinhood/1.0 (Python-%d.%d.%d-%s)" % sys.version_info[0:4]
         }
         self.session.headers = self.headers
 
@@ -195,7 +192,12 @@ class Robinhood:
             self.positions = self.get_endpoint("positions")['results']
         if bid_price == None:
             bid_price = self.quote_data(instrument['symbol'])[0]['bid_price']
-        data = 'account=%s&instrument=%s&price=%f&quantity=%d&side=buy&symbol=%s&time_in_force=gfd&trigger=immediate&type=market' % (urllib.quote(self.positions[0]['account']), urllib.unquote(instrument['url']), float(bid_price), quantity, instrument['symbol']) 
+        datapoints = (urllib.quote(self.positions[0]['account']),
+          urllib.unquote(instrument['url']),
+          float(bid_price),
+          quantity,
+          instrument['symbol'])
+        data = 'account=%s&instrument=%s&price=%f&quantity=%d&side=buy&symbol=%s&time_in_force=gfd&trigger=immediate&type=market' % datapoints
         res = self.session.post(self.endpoints['orders'], data=data)
         return res
 
@@ -206,4 +208,16 @@ class Robinhood:
     def place_sell_order(self, instrument, quantity, bid_price=None):
         transaction = "sell"
         return self.place_order(instrument, quantity, bid_price, transaction)
+
+def __main__(*args, **kwargs):
+    print('__main__ Robinhood function.')
+    from pprint import pprint
+    pprint({
+      'args': args,
+      'kwargs': kwargs
+    })
+
+if __name__ == '__main__':
+    print('Main Robinhood entrypoint.')
+
 
