@@ -34,7 +34,7 @@ fields = collections.defaultdict(dict)
 trade_count = 0
 queued_count = 0
 
-#holds instrument['symbols'] to reduce API ovehead {instrument_url:symbol}
+# holds instrument['symbols'] to reduce API ovehead {instrument_url:symbol}
 cached_instruments = {}
 
 # fetch order history and related metadata from the Robinhood API

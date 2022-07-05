@@ -4,7 +4,6 @@ import os
 import sys
 from glob import glob
 from pprint import pprint
-from distutils.core import setup
 from setuptools import setup
 
 sys.path.insert(0, os.path.abspath('lib'))
@@ -23,14 +22,13 @@ setup_opts = {
     'install_requires'    : [
       'requests',
       'pandas>=0.17.0',
-      'python-dotenv>=0.8.2',
-      'uuid'
+      'uuid',
+      'kizano',
     ],
     'package_dir'         : { 'Robinhood': 'lib/Robinhood' },
     'packages'            : [
         'Robinhood',
     ],
-
     'scripts'             : glob('bin/*'),
     'test_suite'          : 'tests',
 }
