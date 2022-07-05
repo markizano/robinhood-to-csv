@@ -9,9 +9,14 @@ class Robinhood2Mongo(object):
     Take data from Robinhood and store in MongoDB for later presentation.
     '''
     def __init__(self, config):
+        self.client = Client()
+
+    def __enter__(self):
         self.mongo = pymongo.MongoClient(config.mongo_url)
         self.db = self.mongo.get_database('Robinhood')
-        self.client = Robinhood.api.Robinhood()
+
+    def __exit__(self):
+        self.mongo.close()
 
     def saveOrders(self):
         '''

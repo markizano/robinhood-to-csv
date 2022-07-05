@@ -1,4 +1,6 @@
 
+import sys
+import requests
 from kizano import getLogger
 log = getLogger(__name__)
 
@@ -12,7 +14,7 @@ try:
 except ImportError:
     from urllib import getproxies #py2
 
-class Robinhood:
+class Client(object):
     endpoints = {
         "accounts":               "https://api.robinhood.com/accounts/",
         "achIAVAuth":             "https://api.robinhood.com/ach/iav/auth/",
@@ -45,8 +47,7 @@ class Robinhood:
 
     def __init__(self, cfg={}):
         self.username = cfg.get('username')
-        self.password = cf.get('password')
-        self.mfa_code = cfg.get('mfa_code')
+        self.password = cfg.get('password')
         self.auth_token = None
         self.cached_instruments = {}
         self.session = requests.session()
@@ -56,7 +57,7 @@ class Robinhood:
             "Accept-Encoding": "gzip, deflate",
             "Accept-Language": "en;q=1, fr;q=0.9, de;q=0.8, ja;q=0.7, nl;q=0.6, it;q=0.5",
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-            "X-Robinhood-API-Version": "1.0.0",
+            #"X-Robinhood-API-Version": "brokeback/1.433.103-1656710961-ge1566519d9156179dc522e0d2f98a6a3aa0128df",
             "Connection": "keep-alive",
             "User-Agent": "libRobinhood/1.0 (Python-%d.%d.%d-%s)" % sys.version_info[0:4]
         }
@@ -66,7 +67,7 @@ class Robinhood:
         '''
         If any of the endpoints are called as methods, return the HTTP response to it.
         '''
-        if name in Robinhood.endpoints:
+        if name in Client.endpoints:
             return lambda *args: self.get(name, *args)
         raise AttributeError(f'{self.__class__} has no attribute {name}')
 
@@ -81,7 +82,7 @@ class Robinhood:
         @returns {object} JSON parsed response.
         '''
         qsa = urlencode(params)
-        url = f'{Robinhood.endpoints[endpoint]}?{qsa}'
+        url = f'{Client.endpoints[endpoint]}?{qsa}'
         return self.session.get(url)
 
     def post(self, endpoint, params, data={}):
@@ -97,25 +98,23 @@ class Robinhood:
         '''
         qsa = urlencode(params)
         payload = urlencode(data)
-        url = f'{Robinhood.endpoints[endpoint]}?{qsa}'
+        url = f'{Client.endpoints[endpoint]}?{qsa}'
         return self.session.post(url, payload)
 
-    def login(self, mfa_code=None):
+    def login(self, mfa_code):
         '''
         Implementation of the login function with the expected POST data.
         @param mfa_code {str} Multi-factor code from Authy, Google Authenticator, MS Authenticator
           or <insert-MFA-auth-app-here>.
         @returns {bool} TRUE if passed. FALSE on failed login and will log the error.
         '''
-        fields = {
+        data = {
             'password' : self.password,
             'username' : self.username,
             'grant_type': 'password',
-            'client_id': Robinhood.client_id,
+            'client_id': Client.client_id,
+            'mfa_code': mfa_code
         }
-        if mfa_code:
-            fields['mfa_code'] = self.mfa_code = mfa_code
-        data = urlencode(fields) #py3
         res = self.post('login', {}, data).json()
         try:
             self.auth_token = res['access_token']
@@ -132,7 +131,7 @@ class Robinhood:
         described in @{Robinhood.endpoints}.
         @return {object} JSON decoded response from the server.
         '''
-        if name in Robinhood.endpoints:
+        if name in Client.endpoints:
             return lambda *args: self.get(name, *args)
         raise AttributeError(f'{self.__class__} has no attribute {name}')
 
@@ -149,7 +148,7 @@ class Robinhood:
         return self.cached_instruments[stock]
 
     def quote_data(self, stock):
-        url = f"{Robinhood.endpoints['quotes']}/{stock.upper()}/"
+        url = f"{Client.endpoints['quotes']}/{stock.upper()}/"
         # Check for validity of symbol
         try:
             response = self.session.get(url)

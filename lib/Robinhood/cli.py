@@ -15,6 +15,7 @@ class Config(EasyDict):
         self.mfa = ''
         self.mongo_url = ''
         self.configfile = ''
+        self.outfile = ''
 
 def parseArguments():
     '''
@@ -61,7 +62,15 @@ configuration files and environment variables!
       action='store',
       dest='mfa',
       help='MFA Code from <MFA>-Authenticator app.',
-      required=True
+      #required=True
+    )
+
+    parser.add_argument(
+      '--outfile', '-o',
+      action='store',
+      dest='outfile',
+      help='Where to write CSV results.',
+      default=False
     )
 
     return parser.parse_args()
@@ -84,11 +93,12 @@ def getAllEnv():
     @return {object}
     '''
     return {
-        'username': os.getenv('RH_USERNAME', ''),
-        'password': os.getenv('RH_PASSWORD', ''),
-        'mfa': os.getenv('RH_MFA_CODE', ''),
-        'mongo_url': os.getenv('MONGO_URL', ''),
-        'configfile': os.getenv('CONFIGFILE', '')
+        'username':     os.getenv('RH_USERNAME', ''),
+        'password':     os.getenv('RH_PASSWORD', ''),
+        'mfa':          os.getenv('RH_MFA_CODE', ''),
+        'mongo_url':    os.getenv('MONGO_URL', ''),
+        'configfile':   os.getenv('CONFIGFILE', ''),
+        'outfile':      os.getenv('OUTFILE', ''),
     }
 
 def getConfig():
@@ -102,11 +112,12 @@ def getConfig():
         'password',
         'mfa',
         'mongo_url',
-        'configfile'
+        'configfile',
+        'outfile',
     ]
     args = parseArguments()
     env = getAllEnv()
-    config = loadConfigFile(env['configfile'] or args.configfile)
+    config = loadConfigFile(args.configfile or env['configfile'])
     result = Config()
     for prop in configProperties:
         # First check command line arguments. They take precedence over anything else.

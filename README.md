@@ -1,3 +1,9 @@
+# THIS PROJECT IS DEAD
+I found out that Robinhood had since moved their API's around. This is no longer available, nor feasible anymore.
+Archived for the code to later strip. In the meantime, enjoy some wonderful concepts in this piece of work.
+
+https://github.com/sanko/Robinhood
+
 # Robinhood to CSV
 
 A Python script to export your [Robinhood](https://www.robinhood.com) trades to a .csv file.  Based on the [Robinhood library by Rohan Pai](https://github.com/Jamonek/Robinhood).  Read the back story on my [blog](http://www.onlineaspect.com/2015/12/17/export-robinhood-investments-to-csv).
